@@ -6,7 +6,7 @@
 package suitechainee;
 
 /**
- *
+ * ICommand interface 
  * @author Zoe
  */
 public interface ICommand {

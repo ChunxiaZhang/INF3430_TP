@@ -23,7 +23,6 @@ public class Multiplication implements ICommand{
             res = 0;
         } else {
             while(absVal2-- != 0) {
-                //res += res; 
                 res += add.operate(0, absVal1);
                  
             }
