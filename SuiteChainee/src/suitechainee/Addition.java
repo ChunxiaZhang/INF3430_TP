@@ -23,6 +23,7 @@ public class Addition implements ICommand{
                 res--; 
             }
         }
+        
         return res;
     }
     

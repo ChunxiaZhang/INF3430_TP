@@ -1,6 +1,0 @@
-Parametre1:2
-Parametre2:5
-Parametre3:addition
-Parametre4:10
-Parametre5:10
-Parametre6:MaList: 2,5,7,12,19,31,50,81,131,212

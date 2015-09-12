@@ -5,12 +5,15 @@
  */
 package suitechainee;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -224,7 +227,7 @@ public class SuiteChainee<T> {
      * @return 
     */
     public String getPath() {
-        return mPath + ".txt";
+        return mPath;
     }
     
     /**
@@ -282,7 +285,7 @@ public class SuiteChainee<T> {
     */
     @Override
     public String toString() {
-        StringBuilder result = new StringBuilder("MaList: ");
+        StringBuilder result = new StringBuilder("");
         Node<T> currentNode = this.mHeader;
         if (isEmpty()) {    
             result.append("is empty");
@@ -298,6 +301,7 @@ public class SuiteChainee<T> {
         
     }
     
+    
     /**
      * notice user to input the required parameters
      * check the input is valid
@@ -307,43 +311,81 @@ public class SuiteChainee<T> {
      * create a file and write the list info to this file 
      * @param args the command line arguments
      */
-    public static void main(String[] args) {
-        // input parametres
-        BufferedReader bufferRead = new BufferedReader(new InputStreamReader(System.in));
-        //input operation parameter
-        String operation = inputOperation(bufferRead);
-        //input the fist value
-        int val1 = getIntInput("Enter the first value (entier): ", bufferRead);
-        //input the second value
-        int val2 = getIntInput("Enter the second value (entier): ", bufferRead);
-        //input the taille
-        int taille = inputTaille(bufferRead);
-        //input the state of vide
-        boolean isVide = inputEtatVide(bufferRead);  
-        
-        //create a new list
-        SuiteChainee<Integer> mList = new SuiteChainee<Integer>("MaListe.properties", operation, val1, val2, taille, isVide);
-        //SuiteChainee<Integer> mList = new SuiteChainee<Integer>("MaListe.properties", "division", -20, 3, 6, false);
-        
-        //create an ICommand object according the operation
-        ICommand iCommand = setCommand(operation);
-        
-         try{
-            if(mList.isValide()) {
-                try {
-                    setList(mList, iCommand); //build list
-            } catch(Exception e) {
-                    System.out.println(e.getMessage());
-                }
-            } 
-        } catch(Exception e) {
-            System.out.println(e.getMessage());
+    public static void main(String[] args) throws IOException {
+        Integer val1 = null, val2 = null, taille = null;
+        String operateur = null;
+        Boolean isVide = null;
+        //create Ma_chaine.properties file, if it deos not existe
+        File properFile = new File("Ma_chaine.properties");
+        if(!properFile.exists()) {
+            try {
+                properFile.createNewFile();
+                putProperListParameters();
+                System.out.println("Please entrer propertes in Ma_chaine.properties file");
+                return;
+            } catch (IOException ex) {
+                Logger.getLogger(SuiteChainee.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
         }
         
-        System.out.println(mList.toString());
+        try {
+            //read parametrers from Ma_chaine.properties
+            InputStream is = new FileInputStream("Ma_chaine.properties");
+            Properties proper = new Properties();
+            proper.load(is);
+            is.close();
+            try {
+                val1 = Integer.valueOf(proper.getProperty("val1"));
+                val2 = Integer.valueOf(proper.getProperty("val2"));
+                taille = Integer.valueOf(proper.getProperty("taille"));
+                operateur = proper.getProperty("operateur");
+                
+                if(proper.getProperty("etatVide") != null) {
+                    String strIsVide = proper.getProperty("etatVide").toLowerCase();
+                    if("true".equals(strIsVide)) {
+                        isVide = true;
+                    } else if("false".equals(strIsVide)) {
+                        isVide = false;
+                    }
+                }
+                
+            } catch(NumberFormatException e) {
+                System.out.println(e.getMessage());
+            }
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(SuiteChainee.class.getName()).log(Level.SEVERE, null, ex);
+        }
         
-        // create a file than write the list info to this file
-        createFile(mList);
+        //create a new list
+        try {
+            SuiteChainee<Integer> mList = new SuiteChainee<Integer>("MaListe.properties", operateur, val1, val2, taille, isVide);
+            //create an ICommand object according the operation
+            ICommand iCommand = setCommand(operateur);
+
+             try{
+                if(mList.isValide()) {
+                    try {
+                        setList(mList, iCommand); //build list
+                } catch(Exception e) {
+                        System.out.println(e.getMessage());
+                    }
+                } 
+            } catch(Exception e) {
+                System.out.println(e.getMessage());
+            }
+
+            System.out.println(mList.toString());
+
+            // create a file than write the list info to this file
+            createListElementsProperties();
+            putProperListElements(mList);
+        } catch(NullPointerException e) {
+            
+            System.out.println(e.getMessage());
+            System.out.println("Please entrer propertes in Ma_chaine.properties file");
+        }    
+        
     }
     
     /**
@@ -367,131 +409,67 @@ public class SuiteChainee<T> {
     }
     
     /**
-    * to confirm if operator that user entered is valid
-     * @param etatVide
-     * @return 
+    * to put Properties keys 
+     * @throws java.io.IOException
     */
-    public static boolean isEtatVideValide(String etatVide) {
-        boolean isEtatVideValide = false;
-        if(etatVide.toLowerCase().equals("y") || etatVide.toLowerCase().equals("n")) {
-            isEtatVideValide = true;
+   public static void putProperListParameters() throws IOException {
+        Properties prop = new Properties();
+        prop.put("operateur", "");
+        prop.put("val1", "");
+        prop.put("val2", "");
+        prop.put("taille", "");
+        prop.put("etatVide", "");
+        try {
+            FileOutputStream fis = new FileOutputStream("Ma_chaine.properties");
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fis));
+           
+            prop.store(bw, "ma chaine parameters");
+            bw.close();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(SuiteChainee.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return isEtatVideValide;
+    }
+    
+   /**
+    * to put the result of the elements of list 
+     * @param suiteChainee
+    */
+    public static void putProperListElements(SuiteChainee suiteChainee) throws IOException {
+        Properties prop = new Properties();
+        prop.put("val1", suiteChainee.getVal1().toString());
+        prop.put("val2", suiteChainee.getVal2().toString());
+        prop.put("operateur", suiteChainee.getOperateur());
+        prop.put("index", String.valueOf(suiteChainee.getTheLastIndex()));
+        prop.put("taille", String.valueOf(suiteChainee.getTaille()));
+        prop.put("contenue", suiteChainee.toString());
+        
+        try {
+            FileOutputStream fis = new FileOutputStream("resultsMaList.properties");
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fis));
+            prop.store(bw, "the results");
+            bw.close();
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(SuiteChainee.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
     }
     
     /**
-    * to confirm if taille that user entered is valid
-     * @param taille
-     * @return 
+    * to create result list properties file
     */
-    public static boolean isTailleValide(int taille) {
-        
-        return !(taille < 2 || taille > 10);
-    }
+   public static void createListElementsProperties() {
+       File properFile = new File("resultsMaList.properties");
+       if(!properFile.exists()) {
+           try {
+               properFile.createNewFile();
+           } catch (IOException ex) {
+               Logger.getLogger(SuiteChainee.class.getName()).log(Level.SEVERE, null, ex);
+           }
+       }
+   }
     
-    /**
-    * to confirm if operator that user entered is valid
-     * 
-     * @param operation
-     * @return 
-    */
-    public static boolean isOperationValide(String operation) {
-        
-        switch (operation) {
-            case "addition":
-            case "soustraction":
-            case "multiplication":
-            case "division":
-                return true;
-            default:
-                return false;
-               
-        }
    
-    }
-    
-    /**
-    * to notice user input state of vide expected
-     * @param bufferRead
-     * @return 
-    */
-    public static boolean inputEtatVide(BufferedReader bufferRead) {
-        String notice = "Enter state of vide (Y/y: vide; N/n: not vide): ";
-        String etat = getStringInput(notice, bufferRead);
-        while(!isEtatVideValide(etat)) {
-            etat = getStringInput(notice, bufferRead);
-        }
-        if(etat.toLowerCase().equals("y")) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-    
-    /**
-    * to notice user input expected operation 
-     * @param bufferRead
-     * @return 
-    */
-    public static String inputOperation(BufferedReader bufferRead) {
-        String operation = "";
-        String notice = "Enter operation(addition, soustraction, multiplication or division):";
-        
-        operation = getStringInput(notice, bufferRead);
-        while(!isOperationValide(operation)){
-            operation = getStringInput(notice, bufferRead);
-        }
-        return operation;
-    }
-    
-     /**
-    * to notice user input expected taille 
-     * @param bufferRead
-     * @return 
-    */
-    public static int inputTaille(BufferedReader bufferRead) {
-        String notice = "Enter the taille (unsign entier from 2 to 10): ";
-        int taille = getIntInput(notice, bufferRead);
-        while(!isTailleValide(taille)) {
-            taille = getIntInput(notice, bufferRead);
-        }
-        return taille;
-    }
-    
-     /**
-    * to notice user input and return String parameter
-     * @param notic
-     * @param bufferRead
-     * @return 
-    */
-    public static String getStringInput(String notic, BufferedReader bufferRead) {
-        System.out.println(notic);
-        String result = "";
-        try {
-            result = bufferRead.readLine();
-        } catch (IOException ex) {
-            Logger.getLogger(SuiteChainee.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return result;
-    }
-    
-    /**
-    * to notice user input and return Integer parameter
-     * @param notic
-     * @param bufferRead
-     * @return 
-    */
-    public static Integer getIntInput(String notic, BufferedReader bufferRead) {
-        System.out.println(notic);
-        Integer result = null;
-        try {
-            result = Integer.valueOf(bufferRead.readLine());
-        } catch (IOException ex) {
-            Logger.getLogger(SuiteChainee.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return result;
-    }
-    
+   
     /**
     * to build list according the parameters
      * @param list
@@ -509,33 +487,6 @@ public class SuiteChainee<T> {
                 list.add(nextVal);
             }
         }  
-    }
-    
-    /**
-    * to create a file and write the list info to this file
-     * @param suiteChaine
-    */
-    public static void createFile(SuiteChainee suiteChaine) {
-        BufferedWriter output;
-        File file = new File(suiteChaine.getPath());
-        try {
-            output = new BufferedWriter(new FileWriter(file));
-            output.write("Parametre1:" + suiteChaine.getVal1());
-            output.newLine();
-            output.write("Parametre2:" + suiteChaine.getVal2());
-            output.newLine();
-            output.write("Parametre3:" + suiteChaine.getOperateur());
-            output.newLine();
-            output.write("Parametre4:" + suiteChaine.getTheLastIndex());
-            output.newLine();
-            output.write("Parametre5:" + suiteChaine.getTaille());
-            output.newLine();
-            output.write("Parametre6:" + suiteChaine.toString());
-            output.close();
-        } catch (IOException ex) {
-            Logger.getLogger(SuiteChainee.class.getName()).log(Level.SEVERE, null, ex);
-        } 
-       
     }
     
    /**
